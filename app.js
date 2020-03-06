@@ -1,77 +1,65 @@
+//jshint esversion:6
+
 const express = require("express");
-const https = require("https");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
+const _ = require('lodash');
+
+const homeStartingContent = "Lacus vel facilisis volutpat est velit egestas dui id ornare. Semper auctor neque vitae tempus quam. Sit amet cursus sit amet dictum sit amet justo. Viverra tellus in hac habitasse. Imperdiet proin fermentum leo vel orci porta. Donec ultrices tincidunt arcu non sodales neque sodales ut. Mattis molestie a iaculis at erat pellentesque adipiscing. Magnis dis parturient montes nascetur ridiculus mus mauris vitae ultricies. Adipiscing elit ut aliquam purus sit amet luctus venenatis lectus. Ultrices vitae auctor eu augue ut lectus arcu bibendum at. Odio euismod lacinia at quis risus sed vulputate odio ut. Cursus mattis molestie a iaculis at erat pellentesque adipiscing.";
+const aboutContent = "Hac habitasse platea dictumst vestibulum rhoncus est pellentesque. Dictumst vestibulum rhoncus est pellentesque elit ullamcorper. Non diam phasellus vestibulum lorem sed. Platea dictumst quisque sagittis purus sit. Egestas sed sed risus pretium quam vulputate dignissim suspendisse. Mauris in aliquam sem fringilla. Semper risus in hendrerit gravida rutrum quisque non tellus orci. Amet massa vitae tortor condimentum lacinia quis vel eros. Enim ut tellus elementum sagittis vitae. Mauris ultrices eros in cursus turpis massa tincidunt dui.";
+const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rhoncus urna neque viverra justo nec ultrices. Arcu dui vivamus arcu felis bibendum. Consectetur adipiscing elit duis tristique. Risus viverra adipiscing at in tellus integer feugiat. Sapien nec sagittis aliquam malesuada bibendum arcu vitae. Consequat interdum varius sit amet mattis. Iaculis nunc sed augue lacus. Interdum posuere lorem ipsum dolor sit amet consectetur adipiscing elit. Pulvinar elementum integer enim neque. Ultrices gravida dictum fusce ut placerat orci nulla. Mauris in aliquam sem fringilla ut morbi tincidunt. Tortor posuere ac ut consequat semper viverra nam libero.";
+let posts = [];
 
 const app = express();
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
 
 app.set('view engine', 'ejs');
 
-app.get("/", function(req, res) {
-  res.sendFile(__dirname + "/index.html");
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.static("public"));
 
+
+app.get("/", function(req, res){
+  res.render("home", {startingContent: homeStartingContent, posts:posts});
 
 });
 
-app.post("/", function(req, res){
-  const query = req.body.query;
-  const url = "https://itunes.apple.com/search?term=" + query + "&limit=5";
-
-  https.get(url, function(response) {
-    console.log(response.statusCode);
-
-    response.on("data", function(data){
-      const searchData = JSON.parse(data);
-      const resultNum = searchData.results.length;
-      res.write("<h1>Itunes Music Searcher</h1>");
-      res.write("<input type='text' name='query'>");
-
-      res.write("<table style='border: 1px solid black;'>");
-      for(var i = 0 ; i<resultNum ; i++){
-        res.write("<tr style='border: 1px solid black;'>");
-        res.write("<td style='border: 1px solid black;'><img src=" + searchData.results[i].artworkUrl100 + "></td>");
-        res.write("<td style='border: 1px solid black;'>" + searchData.results[i].artistName + "</td>");
-        res.write("<td style='border: 1px solid black;'>" + searchData.results[i].trackName + "</td>");
-
-
-        res.write("<td style='border: 1px solid black;'>" + "<a href="+'/' +searchData.results[i].trackId +">Details</a>" + "</td>");
-        res.write("</tr>");
-      }
-
-
-      res.write("</table>");
-      res.send();
-    });
-  });
+app.get("/about", function(req, res){
+  res.render("about", {aboutCont: aboutContent});
 });
 
-app.get("/:trackId", function(req, res){
-  const songURL = "https://itunes.apple.com/search?term=" + req.params.trackId;
+app.get("/contact", function(req, res){
+  res.render("contact", {contactCont: contactContent});
+});
 
-  https.get(songURL, function(response) {
-    console.log(response.statusCode);
+app.get("/compose", function(req, res){
+  res.render("compose");
+});
 
-    response.on("data", function(data){
-      const songData = JSON.parse(data);
+app.post("/compose", function(req, res){
+  const post = {
+    title: req.body.titleInput,
+    post: req.body.postInput
+  }
+  posts.push(post);
 
-      res.write("<html lang='en' dir='ltr'>")
-      res.write("<h1>Itunes Music Searcher</h1>");
-      res.write("<a href="+'/'+">Go Back</a><br>");
-      res.write("<img src=" + songData.results[0].artworkUrl100 + "><br>");
-      res.write("<h2>" + songData.results[0].artistName + '-' + songData.results[0].trackName + "</h2><br>");
-      res.write("<h3>Preview:</h3><br>");
-      res.write('<audio controls src='+songData.results[0].previewUrl+'></audio>');
-      res.write('</html>');
+  res.redirect("/");
+});
 
-      res.send();
-    });
+app.get("/posts/:postName", function(req, res){
+  const requested = _.lowerCase(req.params.postName);
+
+  posts.forEach(function(post){
+    if(_.lowerCase(post.title) == requested){
+
+      console.log("Match Found");
+      res.render("post", {requestedTitle: post.title, requestedPost: post.post});
+    }else {
+      console.log("Not a Match");
+    }
   });
 });
 
 
-app.listen(process.env.PORT || 3000, function() {
-  console.log("Server is running");
+app.listen(3000, function() {
+  console.log("Server started on port 3000");
 });
